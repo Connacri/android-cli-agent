@@ -10,7 +10,6 @@ description = "Android package inventory and lifecycle operations."
 output = { workspace = true }
 security = { workspace = true }
 adb-engine = { workspace = true }
-device-manager = { workspace = true }
 tokio = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }

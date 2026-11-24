@@ -96,7 +96,6 @@ name = "app-manager"
 version = "0.1.0"
 dependencies = [
  "adb-engine",
- "device-manager",
  "output",
  "security",
  "serde",
