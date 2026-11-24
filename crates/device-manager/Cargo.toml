@@ -1,0 +1,16 @@
+[package]
+name = "device-manager"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Logical device identity, transport priority and Wi-Fi pairing for android-cli-agent."
+
+[dependencies]
+output = { workspace = true }
+adb-engine = { workspace = true }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }

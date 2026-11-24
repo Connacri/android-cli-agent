@@ -1,0 +1,27 @@
+[package]
+name = "android-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Agent-native CLI to inspect, control and automate Android devices over ADB."
+
+[[bin]]
+name = "android-cli"
+path = "src/main.rs"
+
+[dependencies]
+clap = { workspace = true }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+output = { workspace = true }
+security = { workspace = true }
+adb-engine = { workspace = true }
+device-manager = { workspace = true }
+app-manager = { workspace = true }
+ui-engine = { workspace = true }
+appium-engine = { workspace = true }

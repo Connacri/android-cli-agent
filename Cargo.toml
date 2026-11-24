@@ -1,0 +1,43 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/output",
+    "crates/security",
+    "crates/adb-engine",
+    "crates/device-manager",
+    "crates/app-manager",
+    "crates/ui-engine",
+    "crates/appium-engine",
+    "crates/android-cli",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/Connacri/android-cli-agent"
+rust-version = "1.80"
+authors = ["Connacri"]
+description = "Agent-native CLI to inspect, control and automate Android devices over ADB from a PC."
+
+[workspace.dependencies]
+clap = { version = "4.5", features = ["derive"] }
+tokio = { version = "1", features = ["process", "rt-multi-thread", "macros", "io-util", "sync", "time"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+quick-xml = "0.37"
+
+output = { path = "crates/output" }
+security = { path = "crates/security" }
+adb-engine = { path = "crates/adb-engine" }
+device-manager = { path = "crates/device-manager" }
+app-manager = { path = "crates/app-manager" }
+ui-engine = { path = "crates/ui-engine" }
+appium-engine = { path = "crates/appium-engine" }
+
+[profile.release]
+strip = true
+lto = "thin"

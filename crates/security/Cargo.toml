@@ -1,0 +1,10 @@
+[package]
+name = "security"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Explicit human confirmation gates for destructive operations."
+
+[dependencies]
+thiserror = { workspace = true }

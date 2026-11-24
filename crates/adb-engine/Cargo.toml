@@ -1,0 +1,13 @@
+[package]
+name = "adb-engine"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Thin async wrapper around the official Android platform-tools adb binary."
+
+[dependencies]
+output = { workspace = true }
+tokio = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }

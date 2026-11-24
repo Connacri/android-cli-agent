@@ -1,0 +1,17 @@
+[package]
+name = "ui-engine"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "UI inspection and input control (screencap, uiautomator dump, input)."
+
+[dependencies]
+output = { workspace = true }
+adb-engine = { workspace = true }
+device-manager = { workspace = true }
+tokio = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+quick-xml = { workspace = true }

@@ -1,0 +1,12 @@
+[package]
+name = "appium-engine"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Optional Appium UiAutomator2 engine detection (never required for classic operations)."
+
+[dependencies]
+output = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
