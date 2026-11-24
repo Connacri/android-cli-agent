@@ -17,8 +17,6 @@ edition = "2021"
 license = "MIT"
 repository = "https://github.com/Connacri/android-cli-agent"
 rust-version = "1.80"
-authors = ["Connacri"]
-description = "Agent-native CLI to inspect, control and automate Android devices over ADB from a PC."
 
 [workspace.dependencies]
 clap = { version = "4.5", features = ["derive"] }
