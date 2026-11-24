@@ -112,14 +112,19 @@ mod tests {
 
     #[test]
     fn success_envelope_shape() {
-        let json = serde_json::to_string(&SuccessEnvelope::new(serde_json::json!({"n": 1}))).unwrap();
+        let json =
+            serde_json::to_string(&SuccessEnvelope::new(serde_json::json!({"n": 1}))).unwrap();
         assert_eq!(json, r#"{"ok":true,"data":{"n":1}}"#);
     }
 
     #[test]
     fn error_envelope_shape() {
-        let json = serde_json::to_string(&ErrorEnvelope::new("E_DEVICE_NOT_FOUND", "nope")).unwrap();
-        assert_eq!(json, r#"{"ok":false,"error":{"code":"E_DEVICE_NOT_FOUND","message":"nope"}}"#);
+        let json =
+            serde_json::to_string(&ErrorEnvelope::new("E_DEVICE_NOT_FOUND", "nope")).unwrap();
+        assert_eq!(
+            json,
+            r#"{"ok":false,"error":{"code":"E_DEVICE_NOT_FOUND","message":"nope"}}"#
+        );
     }
 
     #[test]

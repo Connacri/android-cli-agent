@@ -71,7 +71,12 @@ pub fn require(action: &str, target: &str, assume_yes: bool) -> Result<(), Confi
 mod tests {
     use super::*;
 
-    fn run(action: &str, target: &str, yes: bool, input: &str) -> (Result<(), ConfirmationError>, String) {
+    fn run(
+        action: &str,
+        target: &str,
+        yes: bool,
+        input: &str,
+    ) -> (Result<(), ConfirmationError>, String) {
         let mut reader = input.as_bytes();
         let mut writer = Vec::new();
         let res = confirm_with(action, target, yes, &mut reader, &mut writer);
@@ -93,9 +98,18 @@ mod tests {
 
     #[test]
     fn empty_or_no_declines() {
-        assert_eq!(run("apps uninstall", "com.x", false, "\n").0, Err(ConfirmationError::Declined));
-        assert_eq!(run("apps uninstall", "com.x", false, "no\n").0, Err(ConfirmationError::Declined));
-        assert_eq!(run("apps uninstall", "com.x", false, "maybe\n").0, Err(ConfirmationError::Declined));
+        assert_eq!(
+            run("apps uninstall", "com.x", false, "\n").0,
+            Err(ConfirmationError::Declined)
+        );
+        assert_eq!(
+            run("apps uninstall", "com.x", false, "no\n").0,
+            Err(ConfirmationError::Declined)
+        );
+        assert_eq!(
+            run("apps uninstall", "com.x", false, "maybe\n").0,
+            Err(ConfirmationError::Declined)
+        );
     }
 
     #[test]

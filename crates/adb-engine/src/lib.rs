@@ -187,10 +187,7 @@ pub fn parse_devices_output(text: &str) -> Vec<DeviceEntry> {
     let mut entries = Vec::new();
     for line in text.lines() {
         let line = line.trim();
-        if line.is_empty()
-            || line.starts_with('*')
-            || line.starts_with("List of devices")
-        {
+        if line.is_empty() || line.starts_with('*') || line.starts_with("List of devices") {
             continue;
         }
         let mut tokens = line.split_whitespace().peekable();
@@ -284,7 +281,11 @@ pub fn classify_failure(serial: &str, out: &AdbOutput) -> AdbError {
 /// device logic can be tested against a mock without a physical phone.
 pub trait AdbBackend: Send + Sync {
     /// Run `adb <args...>` and wait for completion (with timeout).
-    async fn run(&self, args: &[&str]) -> Result<AdbOutput, AdbError>;
+    /// RPITIT with an explicit `Send` bound so callers may spawn the future.
+    fn run(
+        &self,
+        args: &[&str],
+    ) -> impl std::future::Future<Output = Result<AdbOutput, AdbError>> + Send;
 }
 
 /// Real backend spawning the official adb binary.
@@ -313,9 +314,7 @@ impl Adb {
         }
         for var in ["ANDROID_HOME", "ANDROID_SDK_ROOT"] {
             if let Ok(home) = std::env::var(var) {
-                let candidate = Path::new(&home)
-                    .join("platform-tools")
-                    .join(exe_name());
+                let candidate = Path::new(&home).join("platform-tools").join(exe_name());
                 if candidate.is_file() {
                     return Ok(candidate);
                 }
@@ -357,35 +356,40 @@ impl Adb {
 }
 
 impl AdbBackend for Adb {
-    async fn run(&self, args: &[&str]) -> Result<AdbOutput, AdbError> {
-        tracing::debug!(path = %self.path.display(), ?args, "spawn adb");
-        let fut = tokio::process::Command::new(&self.path)
-            .args(args)
-            .stdin(std::process::Stdio::null())
-            .output();
-        let out = match tokio::time::timeout(self.timeout, fut).await {
-            Ok(Ok(out)) => out,
-            Ok(Err(e)) => {
-                return Err(if e.kind() == std::io::ErrorKind::NotFound {
-                    AdbError::NotFound
-                } else {
-                    AdbError::Spawn {
-                        path: self.path.clone(),
-                        source: e,
-                    }
-                });
-            }
-            Err(_) => {
-                return Err(AdbError::Timeout {
-                    timeout_secs: self.timeout.as_secs(),
-                });
-            }
-        };
-        Ok(AdbOutput::new(
-            out.status.code().unwrap_or(-1),
-            out.stdout,
-            out.stderr,
-        ))
+    fn run(
+        &self,
+        args: &[&str],
+    ) -> impl std::future::Future<Output = Result<AdbOutput, AdbError>> + Send {
+        async move {
+            tracing::debug!(path = %self.path.display(), ?args, "spawn adb");
+            let fut = tokio::process::Command::new(&self.path)
+                .args(args)
+                .stdin(std::process::Stdio::null())
+                .output();
+            let out = match tokio::time::timeout(self.timeout, fut).await {
+                Ok(Ok(out)) => out,
+                Ok(Err(e)) => {
+                    return Err(if e.kind() == std::io::ErrorKind::NotFound {
+                        AdbError::NotFound
+                    } else {
+                        AdbError::Spawn {
+                            path: self.path.clone(),
+                            source: e,
+                        }
+                    });
+                }
+                Err(_) => {
+                    return Err(AdbError::Timeout {
+                        timeout_secs: self.timeout.as_secs(),
+                    });
+                }
+            };
+            Ok(AdbOutput::new(
+                out.status.code().unwrap_or(-1),
+                out.stdout,
+                out.stderr,
+            ))
+        }
     }
 }
 
@@ -437,7 +441,10 @@ emulator-5554          device product:sdk_gphone64 model:sdk_gphone64_x86_64 dev
         assert_eq!(entries[3].state, DeviceState::Unauthorized);
         assert_eq!(entries[4].state, DeviceState::Offline);
         // the `usb:` extra of the first entry must survive state parsing
-        assert_eq!(entries[0].extras.get("usb").map(String::as_str), Some("1-1"));
+        assert_eq!(
+            entries[0].extras.get("usb").map(String::as_str),
+            Some("1-1")
+        );
         // daemon noise is not an entry
         assert!(!entries.iter().any(|e| e.serial.starts_with('*')));
     }
@@ -459,10 +466,22 @@ emulator-5554          device product:sdk_gphone64 model:sdk_gphone64_x86_64 dev
 
     #[test]
     fn transport_hint_rules() {
-        assert_eq!(TransportHint::from_serial("192.168.1.42:5555"), TransportHint::Wifi);
-        assert_eq!(TransportHint::from_serial("localhost:5037"), TransportHint::Wifi);
-        assert_eq!(TransportHint::from_serial("R58M12ABCDE"), TransportHint::Usb);
-        assert_eq!(TransportHint::from_serial("emulator-5554"), TransportHint::Emulator);
+        assert_eq!(
+            TransportHint::from_serial("192.168.1.42:5555"),
+            TransportHint::Wifi
+        );
+        assert_eq!(
+            TransportHint::from_serial("localhost:5037"),
+            TransportHint::Wifi
+        );
+        assert_eq!(
+            TransportHint::from_serial("R58M12ABCDE"),
+            TransportHint::Usb
+        );
+        assert_eq!(
+            TransportHint::from_serial("emulator-5554"),
+            TransportHint::Emulator
+        );
         // `host:port` requires a numeric port; `a:b` stays unknown
         assert_eq!(TransportHint::from_serial("a:b"), TransportHint::Unknown);
     }
@@ -471,8 +490,14 @@ emulator-5554          device product:sdk_gphone64 model:sdk_gphone64_x86_64 dev
     fn parses_getprop() {
         let fixture = "[ro.serialno]: [R58M12ABCDE]\n[ro.product.model]: [SM_G973F]\n[ro.build.version.release]: [14]\ngarbage line\n";
         let props = parse_getprop(fixture);
-        assert_eq!(props.get("ro.serialno").map(String::as_str), Some("R58M12ABCDE"));
-        assert_eq!(props.get("ro.product.model").map(String::as_str), Some("SM_G973F"));
+        assert_eq!(
+            props.get("ro.serialno").map(String::as_str),
+            Some("R58M12ABCDE")
+        );
+        assert_eq!(
+            props.get("ro.product.model").map(String::as_str),
+            Some("SM_G973F")
+        );
         assert_eq!(
             props.get("ro.build.version.release").map(String::as_str),
             Some("14")
@@ -483,7 +508,10 @@ emulator-5554          device product:sdk_gphone64 model:sdk_gphone64_x86_64 dev
     #[test]
     fn parses_adb_version() {
         let fixture = "Android Debug Bridge version 1.0.41\nVersion 35.0.2-12147458\nInstalled as C:\\platform-tools\\adb.exe\n";
-        assert_eq!(parse_adb_version(fixture).as_deref(), Some("35.0.2-12147458"));
+        assert_eq!(
+            parse_adb_version(fixture).as_deref(),
+            Some("35.0.2-12147458")
+        );
         assert_eq!(
             parse_adb_version("Android Debug Bridge version 1.0.39").as_deref(),
             Some("1.0.39")
