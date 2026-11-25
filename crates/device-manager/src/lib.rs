@@ -932,6 +932,7 @@ mod tests {
     }
 
     impl AdbBackend for MockAdb {
+        #[allow(clippy::manual_async_fn)]
         fn run(
             &self,
             args: &[&str],

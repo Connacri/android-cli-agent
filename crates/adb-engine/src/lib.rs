@@ -356,6 +356,7 @@ impl Adb {
 }
 
 impl AdbBackend for Adb {
+    #[allow(clippy::manual_async_fn)] // RPITIT + Send keeps the trait spawnable
     fn run(
         &self,
         args: &[&str],

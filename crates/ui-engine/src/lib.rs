@@ -193,7 +193,9 @@ impl<B: AdbBackend> UiEngine<B> {
         serial: &str,
         dest: Option<&Path>,
     ) -> Result<ScreenshotResult, UiError> {
-        let out = self.run_on(serial, &["exec-out", "screencap", "-p"]).await?;
+        let out = self
+            .run_on(serial, &["exec-out", "screencap", "-p"])
+            .await?;
         let png_magic = [0x89u8, b'P', b'N', b'G'];
         if !out.stdout.starts_with(&png_magic) {
             return Err(UiError::ScreenshotFailed(
@@ -257,13 +259,13 @@ impl<B: AdbBackend> UiEngine<B> {
     }
 
     /// Find nodes matching a selector (dumps the hierarchy first).
-    pub async fn find(
-        &self,
-        serial: &str,
-        filter: &NodeFilter,
-    ) -> Result<Vec<UiNode>, UiError> {
+    pub async fn find(&self, serial: &str, filter: &NodeFilter) -> Result<Vec<UiNode>, UiError> {
         let hierarchy = self.dump(serial).await?;
-        Ok(hierarchy.nodes.into_iter().filter(|n| filter.matches(n)).collect())
+        Ok(hierarchy
+            .nodes
+            .into_iter()
+            .filter(|n| filter.matches(n))
+            .collect())
     }
 
     // ---------------------------------------------------------------- input
@@ -301,8 +303,13 @@ impl<B: AdbBackend> UiEngine<B> {
         self.run_on(
             serial,
             &[
-                "input", "swipe", &x1.to_string(), &y1.to_string(), &x2.to_string(),
-                &y2.to_string(), &duration,
+                "input",
+                "swipe",
+                &x1.to_string(),
+                &y1.to_string(),
+                &x2.to_string(),
+                &y2.to_string(),
+                &duration,
             ],
         )
         .await?;
@@ -325,7 +332,9 @@ impl<B: AdbBackend> UiEngine<B> {
 
     /// Send a key event (`KEYCODE_BACK` or a numeric keycode).
     pub async fn key(&self, serial: &str, keycode: &str) -> Result<InputResult, UiError> {
-        let valid = keycode.chars().all(|c| c.is_ascii_uppercase() || c.is_ascii_digit() || c == '_')
+        let valid = keycode
+            .chars()
+            .all(|c| c.is_ascii_uppercase() || c.is_ascii_digit() || c == '_')
             && !keycode.is_empty();
         if !valid {
             return Err(UiError::InvalidInput(format!(
@@ -392,12 +401,10 @@ fn xml_unescape(s: &str) -> String {
 /// Parse one `<node ...>` element (start or empty tag) into a [`UiNode`].
 fn node_from_event(e: &quick_xml::events::BytesStart, depth: usize) -> UiNode {
     let mut attrs: HashMap<String, String> = HashMap::new();
-    for attr in e.attributes() {
-        if let Ok(a) = attr {
-            let key = String::from_utf8_lossy(a.key.as_ref()).into_owned();
-            let value = xml_unescape(&String::from_utf8_lossy(a.value.as_ref()));
-            attrs.insert(key, value);
-        }
+    for attr in e.attributes().flatten() {
+        let key = String::from_utf8_lossy(attr.key.as_ref()).into_owned();
+        let value = xml_unescape(&String::from_utf8_lossy(attr.value.as_ref()));
+        attrs.insert(key, value);
     }
     let get = |k: &str| attrs.get(k).cloned().unwrap_or_default();
     let bool_of = |k: &str| attrs.get(k).map(|v| v == "true").unwrap_or(false);
@@ -412,8 +419,12 @@ fn node_from_event(e: &quick_xml::events::BytesStart, depth: usize) -> UiNode {
         checked: bool_of("checked"),
         selected: bool_of("selected"),
         scrollable: bool_of("scrollable"),
-        bounds: parse_bounds(&get("bounds"))
-            .unwrap_or(Rect { x: 0, y: 0, width: 0, height: 0 }),
+        bounds: parse_bounds(&get("bounds")).unwrap_or(Rect {
+            x: 0,
+            y: 0,
+            width: 0,
+            height: 0,
+        }),
         depth,
     }
 }
@@ -486,7 +497,8 @@ mod tests {
         }
 
         fn on(mut self, key: &str, reply: &str) -> Self {
-            self.replies.insert(key.to_string(), (0, reply.as_bytes().to_vec()));
+            self.replies
+                .insert(key.to_string(), (0, reply.as_bytes().to_vec()));
             self
         }
 
@@ -496,7 +508,8 @@ mod tests {
         }
 
         fn on_status(mut self, key: &str, status: i32, reply: &str) -> Self {
-            self.replies.insert(key.to_string(), (status, reply.as_bytes().to_vec()));
+            self.replies
+                .insert(key.to_string(), (status, reply.as_bytes().to_vec()));
             self
         }
 
@@ -506,6 +519,7 @@ mod tests {
     }
 
     impl AdbBackend for MockAdb {
+        #[allow(clippy::manual_async_fn)]
         fn run(
             &self,
             args: &[&str],
@@ -519,11 +533,7 @@ mod tests {
                     ["-s", _, rest @ ..] => rest.join(" "),
                     _ => args.join(" "),
                 };
-                let (status, reply) = self
-                    .replies
-                    .get(&key)
-                    .cloned()
-                    .unwrap_or((0, Vec::new()));
+                let (status, reply) = self.replies.get(&key).cloned().unwrap_or((0, Vec::new()));
                 Ok(AdbOutput::new(status, reply, Vec::new()))
             }
         }
@@ -532,7 +542,15 @@ mod tests {
     #[test]
     fn parses_bounds_and_center() {
         let r = parse_bounds("[100,200][500,300]").unwrap();
-        assert_eq!(r, Rect { x: 100, y: 200, width: 400, height: 100 });
+        assert_eq!(
+            r,
+            Rect {
+                x: 100,
+                y: 200,
+                width: 400,
+                height: 100
+            }
+        );
         assert_eq!(r.center(), (300, 250));
         assert_eq!(parse_bounds("garbage"), None);
     }
@@ -545,7 +563,10 @@ mod tests {
         assert_eq!(title.text, "Hello & welcome");
         assert_eq!(title.resource_id, "com.example:id/title");
         assert!(title.clickable);
-        assert_eq!(title.depth, 2, "root=1, frame=2, title=3? depth counts starts");
+        assert_eq!(
+            title.depth, 2,
+            "root=1, frame=2, title=3? depth counts starts"
+        );
         assert_eq!(h.nodes[2].text, "OK");
         assert_eq!(h.nodes[2].bounds.center(), (540, 1860));
     }
@@ -563,24 +584,32 @@ mod tests {
     fn node_filter_matching() {
         let h = parse_hierarchy(HIERARCHY).unwrap();
         let ok_btn = &h.nodes[2];
-        let mut f = NodeFilter::default();
-        f.text = Some("OK".into());
+        let mut f = NodeFilter {
+            text: Some("OK".into()),
+            ..Default::default()
+        };
         assert!(f.matches(ok_btn));
         f.text = Some("CANCEL".into());
         assert!(!f.matches(ok_btn));
 
-        let mut f = NodeFilter::default();
-        f.text_contains = Some("welcome".into());
+        let f = NodeFilter {
+            text_contains: Some("welcome".into()),
+            ..Default::default()
+        };
         assert!(f.matches(&h.nodes[1]));
         assert!(!f.matches(ok_btn));
 
-        let mut f = NodeFilter::default();
-        f.clickable = Some(true);
+        let f = NodeFilter {
+            clickable: Some(true),
+            ..Default::default()
+        };
         assert!(f.matches(&h.nodes[1]));
         assert!(!f.matches(&h.nodes[0]));
 
-        let mut f = NodeFilter::default();
-        f.resource_id = Some("com.example:id/title".into());
+        let f = NodeFilter {
+            resource_id: Some("com.example:id/title".into()),
+            ..Default::default()
+        };
         assert!(f.matches(&h.nodes[1]));
     }
 
@@ -640,12 +669,16 @@ mod tests {
     async fn find_returns_matching_nodes() {
         let adb = MockAdb::new().on("exec-out uiautomator dump /dev/tty", HIERARCHY);
         let engine = UiEngine::new(adb);
-        let mut f = NodeFilter::default();
-        f.clickable = Some(true);
+        let f = NodeFilter {
+            clickable: Some(true),
+            ..Default::default()
+        };
         let found = engine.find("SER", &f).await.unwrap();
         assert_eq!(found.len(), 2);
-        let mut f = NodeFilter::default();
-        f.text = Some("NOPE".into());
+        let f = NodeFilter {
+            text: Some("NOPE".into()),
+            ..Default::default()
+        };
         assert!(engine.find("SER", &f).await.unwrap().is_empty());
     }
 
@@ -655,8 +688,10 @@ mod tests {
             .on("exec-out uiautomator dump /dev/tty", HIERARCHY)
             .on("input tap 540 1860", "");
         let engine = UiEngine::new(adb);
-        let mut f = NodeFilter::default();
-        f.text = Some("OK".into());
+        let f = NodeFilter {
+            text: Some("OK".into()),
+            ..Default::default()
+        };
         let res = engine.tap("SER", TapTarget::Selector(f)).await.unwrap();
         assert_eq!(res.detail, "540,1860");
     }
@@ -665,8 +700,10 @@ mod tests {
     async fn tap_without_match_is_typed_error() {
         let adb = MockAdb::new().on("exec-out uiautomator dump /dev/tty", HIERARCHY);
         let engine = UiEngine::new(adb);
-        let mut f = NodeFilter::default();
-        f.text = Some("GHOST".into());
+        let f = NodeFilter {
+            text: Some("GHOST".into()),
+            ..Default::default()
+        };
         let err = engine.tap("SER", TapTarget::Selector(f)).await.unwrap_err();
         assert_eq!(err.code(), "E_UI_NO_MATCH");
     }
@@ -678,9 +715,15 @@ mod tests {
             .on("input swipe 0 100 0 900 250", "")
             .on("input keyevent KEYCODE_BACK", "");
         let engine = UiEngine::new(adb);
-        let res = engine.tap("SER", TapTarget::Point { x: 10, y: 20 }).await.unwrap();
+        let res = engine
+            .tap("SER", TapTarget::Point { x: 10, y: 20 })
+            .await
+            .unwrap();
         assert_eq!(res.detail, "10,20");
-        let res = engine.swipe("SER", 0, 100, 0, 900, Some(250)).await.unwrap();
+        let res = engine
+            .swipe("SER", 0, 100, 0, 900, Some(250))
+            .await
+            .unwrap();
         assert_eq!(res.action, "swipe");
         let res = engine.key("SER", "KEYCODE_BACK").await.unwrap();
         assert_eq!(res.detail, "KEYCODE_BACK");
@@ -696,7 +739,9 @@ mod tests {
         let res = engine.text("SER", "hello world").await.unwrap();
         assert_eq!(res.action, "text");
         let calls = engine.backend.calls();
-        assert!(calls.iter().any(|c| c.last().map(String::as_str) == Some("'hello world'")));
+        assert!(calls
+            .iter()
+            .any(|c| c.last().map(String::as_str) == Some("'hello world'")));
         // Newline rejected before adb.
         let err = engine.text("SER", "a\nb").await.unwrap_err();
         assert_eq!(err.code(), "E_INVALID_ARG");

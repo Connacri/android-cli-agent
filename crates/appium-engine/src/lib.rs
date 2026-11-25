@@ -121,7 +121,9 @@ impl<B: AdbBackend> AppiumEngine<B> {
             Some(serial) => {
                 let args = ["-s", serial, "shell", "pm", "list", "packages"];
                 match self.backend.run(&args).await {
-                    Ok(out) if out.success() => Some(parse_uiautomator2_installed(&out.stdout_str())),
+                    Ok(out) if out.success() => {
+                        Some(parse_uiautomator2_installed(&out.stdout_str()))
+                    }
                     Ok(_) | Err(_) => None,
                 }
             }
@@ -146,7 +148,7 @@ fn explicit_appium() -> Option<PathBuf> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use adb_engine::{AdbOutput, AdbError};
+    use adb_engine::{AdbError, AdbOutput};
     use std::collections::HashMap;
     use std::sync::Mutex;
 
@@ -170,6 +172,7 @@ mod tests {
     }
 
     impl AdbBackend for MockAdb {
+        #[allow(clippy::manual_async_fn)]
         fn run(
             &self,
             args: &[&str],
@@ -250,11 +253,18 @@ mod tests {
         // simulate a device-side failure.
         struct Failing;
         impl AdbBackend for Failing {
+            #[allow(clippy::manual_async_fn)]
             fn run(
                 &self,
                 _args: &[&str],
             ) -> impl std::future::Future<Output = Result<AdbOutput, AdbError>> + Send {
-                async move { Ok(AdbOutput::new(1, Vec::new(), b"error: device offline".to_vec())) }
+                async move {
+                    Ok(AdbOutput::new(
+                        1,
+                        Vec::new(),
+                        b"error: device offline".to_vec(),
+                    ))
+                }
             }
         }
         let engine = AppiumEngine::new(Failing);

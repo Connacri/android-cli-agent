@@ -7,10 +7,10 @@
 //! Callers holding a [`device_manager`] lock must wrap mutations with it;
 //! the CLI does this, see `crates/android-cli`.
 
-use adb_engine::{AdbBackend, AdbOutput, AdbError};
+use adb_engine::{AdbBackend, AdbError, AdbOutput};
 use output::Coded;
-use serde::Serialize;
 use security::ConfirmationError;
+use serde::Serialize;
 use std::path::Path;
 use thiserror::Error;
 
@@ -95,11 +95,7 @@ impl<B: AdbBackend> AppManager<B> {
         Self { backend }
     }
 
-    async fn run_on(
-        &self,
-        serial: &str,
-        args: &[&str],
-    ) -> Result<AdbOutput, AppError> {
+    async fn run_on(&self, serial: &str, args: &[&str]) -> Result<AdbOutput, AppError> {
         let mut full: Vec<&str> = Vec::with_capacity(args.len() + 2);
         full.push("-s");
         full.push(serial);
@@ -114,11 +110,7 @@ impl<B: AdbBackend> AppManager<B> {
         Ok(out)
     }
 
-    async fn shell(
-        &self,
-        serial: &str,
-        args: &[&str],
-    ) -> Result<AdbOutput, AppError> {
+    async fn shell(&self, serial: &str, args: &[&str]) -> Result<AdbOutput, AppError> {
         let mut full: Vec<&str> = Vec::with_capacity(args.len() + 1);
         full.push("shell");
         full.extend_from_slice(args);
@@ -212,9 +204,7 @@ impl<B: AdbBackend> AppManager<B> {
             return Err(AppError::NotFound(package.to_string()));
         };
 
-        let dump = self
-            .shell(serial, &["dumpsys", "package", package])
-            .await?;
+        let dump = self.shell(serial, &["dumpsys", "package", package]).await?;
         let dump_text = dump.stdout_str();
         if dump_text.contains("Unable to find package") {
             return Err(AppError::NotFound(package.to_string()));
@@ -271,10 +261,7 @@ impl<B: AdbBackend> AppManager<B> {
                 ],
             )
             .await;
-        let monkey_text = out
-            .as_ref()
-            .map(|o| o.error_text())
-            .unwrap_or_default();
+        let monkey_text = out.as_ref().map(|o| o.error_text()).unwrap_or_default();
         let monkey_ok = out.is_ok()
             && !monkey_text.contains("No activities found")
             && !monkey_text.contains("monkey aborted");
@@ -305,8 +292,7 @@ impl<B: AdbBackend> AppManager<B> {
             o.stdout_str()
                 .lines()
                 .map(str::trim)
-                .filter(|l| l.contains('/'))
-                .last()
+                .rfind(|l| l.contains('/'))
                 .map(str::to_string)
         });
         let Some(component) = component else {
@@ -396,9 +382,7 @@ impl<B: AdbBackend> AppManager<B> {
         confirmation: Confirmation,
     ) -> Result<AppOpResult, AppError> {
         Self::gate("apps clear-data", package, confirmation)?;
-        let out = self
-            .shell(serial, &["pm", "clear", package])
-            .await?;
+        let out = self.shell(serial, &["pm", "clear", package]).await?;
         let text = out.error_text();
         if !text.contains("Success") {
             return Err(AppError::Failed {
@@ -467,6 +451,7 @@ mod tests {
     }
 
     impl AdbBackend for MockAdb {
+        #[allow(clippy::manual_async_fn)]
         fn run(
             &self,
             args: &[&str],
@@ -481,11 +466,7 @@ mod tests {
                     ["-s", _, rest @ ..] => rest.join(" "),
                     _ => args.join(" "),
                 };
-                let reply = self
-                    .replies
-                    .get(&key)
-                    .cloned()
-                    .unwrap_or_default();
+                let reply = self.replies.get(&key).cloned().unwrap_or_default();
                 Ok(AdbOutput::new(0, reply.into_bytes(), Vec::new()))
             }
         }
@@ -517,7 +498,11 @@ package:/data/app/~~Cd/base.apk=com.example.other\n";
         let names: Vec<&str> = apps.iter().map(|a| a.package.as_str()).collect();
         assert_eq!(
             names,
-            vec!["com.android.settings", "com.example.app", "com.example.other"]
+            vec![
+                "com.android.settings",
+                "com.example.app",
+                "com.example.other"
+            ]
         );
         let settings = &apps[0];
         assert!(settings.system);
@@ -531,7 +516,10 @@ package:/data/app/~~Cd/base.apk=com.example.other\n";
     #[tokio::test]
     async fn info_extracts_versions_sdk_and_pid() {
         let adb = MockAdb::new()
-            .on("shell pm path com.example.app", "package:/data/app/~~Ab/base.apk\n")
+            .on(
+                "shell pm path com.example.app",
+                "package:/data/app/~~Ab/base.apk\n",
+            )
             .on("shell dumpsys package com.example.app", DUMPSYS)
             .on("shell pidof com.example.app", "4242\n");
         let mgr = AppManager::new(adb);
@@ -551,7 +539,10 @@ package:/data/app/~~Cd/base.apk=com.example.other\n";
     #[tokio::test]
     async fn info_detects_system_package_and_missing_pid() {
         let adb = MockAdb::new()
-            .on("shell pm path com.android.settings", "package:/system/app/Settings/Settings.apk\n")
+            .on(
+                "shell pm path com.android.settings",
+                "package:/system/app/Settings/Settings.apk\n",
+            )
             .on("shell dumpsys package com.android.settings", DUMPSYS)
             .on("shell pidof com.android.settings", "");
         let mgr = AppManager::new(adb);
@@ -654,7 +645,9 @@ package:/data/app/~~Cd/base.apk=com.example.other\n";
             &mut prompt,
         );
         assert!(matches!(gated, Err(AppError::Declined)));
-        assert!(String::from_utf8(prompt).unwrap().contains("apps uninstall"));
+        assert!(String::from_utf8(prompt)
+            .unwrap()
+            .contains("apps uninstall"));
         // ...and the async path is structured the same way: gate first.
         assert!(mgr.backend.calls().is_empty());
     }
@@ -696,7 +689,10 @@ package:/data/app/~~Cd/base.apk=com.example.other\n";
 
     #[tokio::test]
     async fn failed_device_operation_is_typed() {
-        let adb = MockAdb::new().on("uninstall com.example.app", "Failure [DELETE_FAILED_INTERNAL_ERROR]\n");
+        let adb = MockAdb::new().on(
+            "uninstall com.example.app",
+            "Failure [DELETE_FAILED_INTERNAL_ERROR]\n",
+        );
         let mgr = AppManager::new(adb);
         let err = mgr
             .uninstall("SER", "com.example.app", Confirmation::AssumeYes)
