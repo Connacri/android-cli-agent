@@ -1,0 +1,56 @@
+name: Release
+
+# Builds and publishes the Windows release binary. Release artifacts are
+# produced ONLY here (never locally): tests must pass before anything ships.
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust (stable)
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Test (blocking gate)
+        run: cargo test --workspace
+
+      - name: Clippy (deny warnings)
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: Build release binary
+        run: cargo build --release --bin android-cli
+
+      - name: Package artifact + checksum
+        shell: pwsh
+        run: |
+          Copy-Item target\release\android-cli.exe android-cli-windows-x86_64.exe
+          $hash = (Get-FileHash android-cli-windows-x86_64.exe -Algorithm SHA256).Hash.ToLower()
+          "$hash  android-cli-windows-x86_64.exe" | Out-File -Encoding ascii SHA256SUMS.txt
+          .\android-cli-windows-x86_64.exe --version
+
+      - name: Create / update GitHub release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $tag = "${{ github.ref_name }}"
+          gh release view $tag 2>$null
+          if ($LASTEXITCODE -ne 0) {
+            gh release create $tag --generate-notes --title "android-cli $tag"
+          }
+          gh release upload $tag android-cli-windows-x86_64.exe SHA256SUMS.txt --clobber
