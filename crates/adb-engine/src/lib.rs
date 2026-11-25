@@ -559,6 +559,20 @@ emulator-5554          device product:sdk_gphone64 model:sdk_gphone64_x86_64 dev
     }
 
     #[test]
+    fn parses_shared_repo_fixture() {
+        let path =
+            Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures/devices-mixed.txt");
+        let text = std::fs::read_to_string(&path).expect("fixture present");
+        let entries = parse_devices_output(&text);
+        assert_eq!(entries.len(), 4);
+        assert_eq!(entries[0].state, DeviceState::Device);
+        assert_eq!(entries[0].transport, TransportHint::Usb);
+        assert_eq!(entries[1].transport, TransportHint::Wifi);
+        assert_eq!(entries[2].state, DeviceState::Unauthorized);
+        assert_eq!(entries[3].state, DeviceState::Offline);
+    }
+
+    #[test]
     fn find_explicit_path_wins() {
         // An existing file (this test file's own manifest) is accepted...
         let real = Path::new(env!("CARGO_MANIFEST_DIR")).join("Cargo.toml");

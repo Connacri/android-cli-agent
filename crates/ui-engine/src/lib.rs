@@ -614,6 +614,29 @@ mod tests {
     }
 
     #[test]
+    fn parses_shared_repo_fixture() {
+        let path =
+            Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures/window_dump.xml");
+        let xml = std::fs::read_to_string(&path).expect("fixture present");
+        let h = parse_hierarchy(&xml).unwrap();
+        assert_eq!(h.node_count, 4);
+        let email = h
+            .nodes
+            .iter()
+            .find(|n| n.resource_id == "com.example.app:id/email")
+            .unwrap();
+        assert_eq!(email.class, "android.widget.EditText");
+        assert_eq!(email.content_desc, "adresse e-mail");
+        assert!(email.clickable);
+        // Filter semantics over the shared fixture too.
+        let f = NodeFilter {
+            text: Some("Se connecter".into()),
+            ..Default::default()
+        };
+        assert_eq!(h.nodes.iter().filter(|n| f.matches(n)).count(), 1);
+    }
+
+    #[test]
     fn input_text_quoting() {
         assert_eq!(quote_input_text("hello world").unwrap(), "'hello world'");
         assert_eq!(quote_input_text("it's").unwrap(), "'it'\\''s'");

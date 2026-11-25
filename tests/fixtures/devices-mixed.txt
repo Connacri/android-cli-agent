@@ -1,0 +1,5 @@
+List of devices attached
+R58M12ABCDE	device usb:1-1 product:beyond1lte model:SM_G973F device:beyond1 transport_id:1
+192.168.1.42:5555	device product:beyond1lte model:SM_G973F device:beyond1 transport_id:2
+0123456789ABCDEF	unauthorized transport_id:3
+192.168.1.99:5555	offline transport_id:4

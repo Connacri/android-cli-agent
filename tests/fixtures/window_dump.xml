@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<hierarchy rotation="0">
+  <node index="0" text="" resource-id="" class="android.widget.FrameLayout" package="com.example.app" content-desc="" checkable="false" checked="false" clickable="false" enabled="true" scrollable="false" bounds="[0,0][1080,2340]">
+    <node index="0" text="Connexion" resource-id="com.example.app:id/title" class="android.widget.TextView" package="com.example.app" content-desc="" checkable="false" checked="false" clickable="false" enabled="true" scrollable="false" bounds="[80,300][1000,400]" />
+    <node index="1" text="user@example.com" resource-id="com.example.app:id/email" class="android.widget.EditText" package="com.example.app" content-desc="adresse e-mail" checkable="false" checked="false" clickable="true" enabled="true" scrollable="false" bounds="[80,500][1000,620]" />
+    <node index="2" text="Se connecter" resource-id="com.example.app:id/login" class="android.widget.Button" package="com.example.app" content-desc="" checkable="false" checked="false" clickable="true" enabled="true" scrollable="false" bounds="[80,700][1000,840]" />
+  </node>
+</hierarchy>
