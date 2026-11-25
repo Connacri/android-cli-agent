@@ -8,5 +8,9 @@ description = "Optional Appium UiAutomator2 engine detection (never required for
 
 [dependencies]
 output = { workspace = true }
+adb-engine = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true }

@@ -108,9 +108,11 @@ dependencies = [
 name = "appium-engine"
 version = "0.1.0"
 dependencies = [
+ "adb-engine",
  "output",
  "serde",
  "thiserror",
+ "tokio",
 ]
 
 [[package]]
