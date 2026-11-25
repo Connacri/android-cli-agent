@@ -9,7 +9,6 @@ description = "UI inspection and input control (screencap, uiautomator dump, inp
 [dependencies]
 output = { workspace = true }
 adb-engine = { workspace = true }
-device-manager = { workspace = true }
 tokio = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }

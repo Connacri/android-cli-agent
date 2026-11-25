@@ -560,7 +560,6 @@ name = "ui-engine"
 version = "0.1.0"
 dependencies = [
  "adb-engine",
- "device-manager",
  "output",
  "quick-xml",
  "serde",
